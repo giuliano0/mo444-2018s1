@@ -51,6 +51,7 @@ trainy = (trainX['shares'])[:, np.newaxis]
 
 trainX.drop('shares', axis=1, inplace=True)
 trainX.drop('url', axis=1, inplace=True)
+trainX.drop('timedelta', axis=1, inplace=True)
 
 trainX = trainX.astype(np.float32)
 trainy = trainy.astype(np.float32)
@@ -63,6 +64,7 @@ testX = pd.read_csv('test.csv')
 testy = pd.read_csv('test_target.csv')
 
 testX.drop('url', axis=1, inplace=True)
+testX.drop('timedelta', axis=1, inplace=True)
 
 testX = testX.astype(np.float32)
 testy = testy.astype(np.float32)
