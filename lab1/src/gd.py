@@ -28,7 +28,8 @@ def gd(train_X, train_y, test_X, test_y, learning_rate=0.0001, iterations=1000, 
         grad_history = np.append(grad_history, grad.T, axis=0)
         
         if ((it + 1) % 100) == 0:
-            print('it=%4d, mse=%.3f, 1000*lr=%.12f' % (it + 1, mse_train, 1000 * learning_rate))
+            print('it=%4d, mse=%.3f, 1000*lr=%.12f' % (it + 1, mse_train,
+                                                       1000 * learning_rate))
         
         if np.isnan(np.sum(grad)) or np.isinf(np.sum(grad)):
             print('NaN or Inf detected, stopping at it=' + str(it))
@@ -46,7 +47,11 @@ def gd(train_X, train_y, test_X, test_y, learning_rate=0.0001, iterations=1000, 
 import pandas as pd
 from sklearn.linear_model import LinearRegression
 
-trainX = pd.read_csv('train.csv')
+trainX = pd.read_csv('../data/train.csv')
+
+# temp (for now): remove some viral articles as outliers
+trainX = trainX[trainX['shares'] <= 10000]
+
 trainy = (trainX['shares'])[:, np.newaxis]
 
 trainX.drop('shares', axis=1, inplace=True)
@@ -59,8 +64,8 @@ scaler = MinMaxScaler((0,10))
 trainX = pd.DataFrame(scaler.fit_transform(trainX), columns=trainX.columns)
 
 
-testX = pd.read_csv('test.csv')
-testy = pd.read_csv('test_target.csv')
+testX = pd.read_csv('../data/test.csv')
+testy = pd.read_csv('../data/test_target.csv')
 
 testX.drop('url', axis=1, inplace=True)
 
@@ -70,7 +75,7 @@ testy = testy.astype(np.float32)
 testX = pd.DataFrame(scaler.transform(testX), columns=testX.columns)
 
 
-w, losses, grads, ws = gd(trainX, trainy, testX, testy, iterations=10000,
+w, losses, grads, ws = gd(trainX, trainy, testX, testy, iterations=4000,
                           learning_rate=1e-3, lr_dampening=0.9999)
 
 
@@ -82,12 +87,22 @@ sk_preds = model.predict(testX).ravel()
 
 all_preds_y = np.vstack((testy.as_matrix().ravel(), my_preds, sk_preds)).T
 
-print('my_preds_mse / sk_preds_mse = %.5f' % (mean_squared_error(my_preds, testy) / mean_squared_error(sk_preds, testy)))
+print('my_preds_mse / sk_preds_mse = %.5f' % (
+    mean_squared_error(my_preds, testy) / mean_squared_error(sk_preds, testy)))
 
 print('finished')
 #print(w)
 
-plt.plot(losses[:, 0])
-plt.plot(losses[:, 1])
-plt.ylim([1.0e8, 2.4e8])
+plt.plot(losses[10:1000, 0])
+plt.plot(losses[10:1000, 1])
+plt.ylim([0, 2.5e8])
 plt.show()
+
+# obs: in respect to these losses with magnitude proportional to 1e8,
+# note this: ((8.4e5)**2 / 3e4) / 1e8
+# 8.4e5 is the approximate error for one of the biggest outliers in the data
+# the error squares it so that's what I'm doing. MSE means we divide it by
+# the magnitude of the size of the dataset, finally dividing by 1e8 which
+# is our problematic value.
+# Note that we get ~0.25 (*1e8) as answer, which means it suffices 8 outliers
+# to reproduce the 2e8 error I observed.
