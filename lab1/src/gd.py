@@ -197,5 +197,3 @@ plt.plot(np.random.choice(np.log(residuals),
                           size=int(1.0 * len(all_preds)), replace=False),
         '.', markersize=1, color='slateblue')
 plt.ylim([-2, 16])
-
-
