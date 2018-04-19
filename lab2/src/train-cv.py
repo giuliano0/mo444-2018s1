@@ -18,7 +18,7 @@ from sklearn.svm import SVC, LinearSVC
 
 # Load features
 X = np.load('../data/9patches_rgby_4feats.npy')
-X = np.load('../data/9patches_rgby_4feats_labels.npy')
+y = np.load('../data/9patches_rgby_4feats_labels.npy')
 
 # Transform X to a matrix because I forgot to do it
 X = np.matrix(X)
