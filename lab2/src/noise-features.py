@@ -43,7 +43,7 @@ from multiprocessing import Pool
 # WHAT ABOUT I START TEH PIPELINE AND DECIDE THESE LATER? OKAY, THANKS FOR LISTENING.
 
 # Patch size (it's always a square AND always a power of 2)
-PSZ = 256
+PSZ = 512
 # Half PSZ
 HPSZ = int(PSZ / 2)
 
@@ -56,6 +56,11 @@ def extract_roi(image):
 
     if c != 3:
         print('Input image had %d colour planes instead of 3.' % (c))
+
+        return None
+    
+    if not m >= 2 * PSZ and n >= 2 * PSZ:
+        print('Input image does not have the minimum dimensions necessary for patch extraction. Skipping.')
 
         return None
 
@@ -179,17 +184,15 @@ def the_algorithm():
         print('Starting class name ' + class_name)
         print('Starting class_dir %s' % (class_dir))
 
-        #dbg_img_count = 0
-
-        for img_path in image_paths:
-            print(' Starting image %s' % (img_path))
+        for i, img_path in enumerate(image_paths):
+            print(' Starting image %s\t\t(%d of %d)' % (img_path, i+1, len(image_paths)))
             img = imread(img_path)
-
-            # Trying a mean normalisation
             img = img.astype(np.float64)
-            img = img - np.mean(img[:])
-
             patches = extract_roi(img)
+
+            if patches == None:
+                # Something went wrong with patch extraction; life goes on
+                continue
             
             # Processes each patch individually
             proc_pool = Pool(9)
@@ -218,40 +221,9 @@ def the_algorithm():
                 all_feats.append(feats)
                 labels.append(class_name)
             '''
-
-            # DEBUG: limits number of images per class
-            #dbg_img_count += 1
-            #if dbg_img_count >= 4:
-                #break
-            
-        # DEBUG: early breaking
-        #if dbg_img_count >= 4:
-            #break
     
     print('done extracting features')
 
     return [all_feats, labels]
-
-
-from matplotlib import pyplot as plt
-from skimage.io import imread, imsave, imshow
-
-def test_extract_patches():
-    # loads an image, extracts its patches, saves them
-    pass
-
-from PIL import Image
-from skimage.io import imread
-
-#A = np.random.randint(1, 255, (3000, 5000, 3)).astype(np.uint8)
-#A = imread('../dataset/train/Motorola-X/(MotoX)226.jpg')
-#patches = extract_roi(A)
-#Aimg = Image.fromarray(A)
-
-#Aimg.show()
-
-#for p in patches:
-    #pimg = Image.fromarray(p)
-    #pimg.show()
 
 print('done')
