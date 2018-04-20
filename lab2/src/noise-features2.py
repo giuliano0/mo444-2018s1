@@ -12,6 +12,7 @@ from scipy.signal import correlate2d
 from skimage.io import imread
 from skimage.color import rgb2ycbcr
 from skimage.restoration import denoise_wavelet
+from skimage.filters import gaussian
 
 from multiprocessing import Pool
 
@@ -69,9 +70,16 @@ def get_noise(patch):
     '''
 
     # Possible change of parameters: multichannel to True, wavelet to other type
-    denoised_patch = denoise_wavelet(patch, wavelet='db5', convert2ycbcr=False, multichannel=True)
+    #denoised_patch = denoise_wavelet(patch, wavelet='db5', convert2ycbcr=False, multichannel=True)
+    denoised_patch = gaussian(patch.astype(np.float64), sigma=0.8, multichannel=True)
 
-    return patch.astype(np.float64) - denoised_patch
+    # I'm gonna normalise this in the gaussian case
+    denoised_patch = (patch.astype(np.float64) - denoised_patch)
+
+    denoised_patch -= np.min(denoised_patch, axis=(0, 1))   # min across planes
+    denoised_patch /= np.max(denoised_patch, axis=(0,1))    # max across planes
+
+    return denoised_patch
 
 
 # Do not use
@@ -164,9 +172,12 @@ def concatenate_ref_spns(classes_dirs):
     return all_ref_spn
 
 
-def the_algorithm():
-    #DATASET_DIR = '../dataset/train'
-    DATASET_DIR = '../problematic-motherfuckers'
+def the_algorithm(dataset_path=None):
+    if dataset_path is None:
+        DATASET_DIR = '../dataset/train'
+        #DATASET_DIR = '../problematic-motherfuckers'
+    else:
+        DATASET_DIR = dataset_path
 
     # Let's extract for each class
     # Then save the SPN reference (1 guy per class) and each image SPN (m images per class)
