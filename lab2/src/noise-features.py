@@ -178,7 +178,7 @@ def the_algorithm():
     labels = []
 
     for class_dir in classes_dir:
-        image_paths = glob.glob(path.join(class_dir, '*.jpg'))
+        image_paths = glob.glob(path.join(class_dir, '*.[Jj][Pp][Gg]'))
         class_name = path.basename(class_dir)
 
         print('Starting class name ' + class_name)
@@ -186,7 +186,7 @@ def the_algorithm():
 
         for i, img_path in enumerate(image_paths):
             print(' Starting image %s\t\t(%d of %d)' % (img_path, i+1, len(image_paths)))
-            img = imread(img_path)
+            img = imread(img_path, plugin='matplotlib')
             img = img.astype(np.float64)
             patches = extract_roi(img)
 
@@ -207,20 +207,6 @@ def the_algorithm():
 
             all_feats.append(feats)
             labels.append(class_name)
-
-            # non-parallelised code
-            '''
-            for p in patches:
-                p = append_luminance(p)
-                noises = get_noise(p)
-                _, _, c = noises.shape
-
-                feats = np.array([extract_features(npl) for npl in np.dsplit(noises, c)]).ravel()
-
-                # does not index labels as integers!
-                all_feats.append(feats)
-                labels.append(class_name)
-            '''
     
     print('done extracting features')
 
