@@ -38,6 +38,11 @@ def extract_patch(image):
 
         return None
 
+    # Test images are all (512, 512, 3) I guess,
+    # so just give back the image itself and that's it
+    if m == PSZ and n == PSZ:
+        return image
+
     # mid point needed by the 5 centre RoI
     r_mid, c_mid = np.floor(np.array([m, n]) / 2)
 
@@ -107,7 +112,7 @@ def process_image_subroutine(img_path):
     return noises # one array (psz, psz, 4)
 
 
-def extract_noise_patterns(class_dir):
+def extract_noise_patterns(class_dir, is_test=False):
     '''
     Returns a list with as many elements as there are images in class_dir.
     Each element is a (512, 512, 4) numpy.ndarray of float64 containing
@@ -118,7 +123,12 @@ def extract_noise_patterns(class_dir):
     noise_patterns = []             # noise patterns, 1 per image
     noise_patterns_labels = []
 
-    image_paths = glob.glob(path.join(class_dir, '*.[Jj][Pp][Gg]')) # MFing case sensitiveness
+    if not is_test:
+        file_pattern = '*.[Tt][Ii][Ff]'
+    else:
+        file_pattern = '*.[Jj][Pp][Gg]'
+
+    image_paths = glob.glob(path.join(class_dir, file_pattern)) # MFing case sensitiveness
     class_name = path.basename(class_dir)
 
     proc_pool = Pool(4)
@@ -172,7 +182,7 @@ def concatenate_ref_spns(classes_dirs):
     return all_ref_spn
 
 
-def the_algorithm(dataset_path=None):
+def the_algorithm(dataset_path=None, is_test=False):
     if dataset_path is None:
         DATASET_DIR = '../dataset/train'
         #DATASET_DIR = '../problematic-motherfuckers'
@@ -197,7 +207,7 @@ def the_algorithm(dataset_path=None):
         print('Starting class \"%s\" (%d of %d)' % (class_name, cidx + 1, len(classes_dir)))
         print('class_dir %s' % (class_dir))
 
-        ref_spn, _, noise_patterns, _ = extract_noise_patterns(class_dir)
+        ref_spn, _, noise_patterns, _ = extract_noise_patterns(class_dir, is_test)
 
         # No need to save labels. I have them by the class_name variable
         np.save('../data/ref_spn_%s' % (class_name), ref_spn)
