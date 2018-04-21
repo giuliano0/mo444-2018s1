@@ -13,3 +13,7 @@ pip-selfcheck*
 lab*/dataset/*
 lab*/data/*
 
+.DS*
+
+__pycache__
+
