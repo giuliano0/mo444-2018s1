@@ -1,6 +1,9 @@
 bin/*
 include/*
-lib/*
+lib*
+share/*
+pyvenv*
+pip-selfcheck*
 
 *ipynb_*
 
