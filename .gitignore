@@ -2,8 +2,14 @@ bin/*
 include/*
 lib*
 share/*
+etc/*
 pyvenv*
 pip-selfcheck*
 
 *ipynb_*
+
+# dataset/ has too many files we don't want to track
+# And same might go for data/
+lab*/dataset/*
+lab*/data/*
 
