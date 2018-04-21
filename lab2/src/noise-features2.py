@@ -75,14 +75,14 @@ def get_noise(patch):
     '''
 
     # Possible change of parameters: multichannel to True, wavelet to other type
-    #denoised_patch = denoise_wavelet(patch, wavelet='db5', convert2ycbcr=False, multichannel=True)
-    denoised_patch = gaussian(patch.astype(np.float64), sigma=0.8, multichannel=True)
+    denoised_patch = denoise_wavelet(patch, wavelet='db5', convert2ycbcr=False, multichannel=True)
+    #denoised_patch = gaussian(patch.astype(np.float64), sigma=0.8, multichannel=True)
 
     # I'm gonna normalise this in the gaussian case
     denoised_patch = (patch.astype(np.float64) - denoised_patch)
 
     denoised_patch -= np.min(denoised_patch, axis=(0, 1))   # min across planes
-    denoised_patch /= np.max(denoised_patch, axis=(0,1))    # max across planes
+    denoised_patch /= np.max(denoised_patch, axis=(0, 1))    # max across planes
 
     return denoised_patch
 
@@ -124,9 +124,9 @@ def extract_noise_patterns(class_dir, is_test=False):
     noise_patterns_labels = []
 
     if not is_test:
-        file_pattern = '*.[Tt][Ii][Ff]'
-    else:
         file_pattern = '*.[Jj][Pp][Gg]'
+    else:
+        file_pattern = '*.[Tt][Ii][Ff]'
 
     image_paths = glob.glob(path.join(class_dir, file_pattern)) # MFing case sensitiveness
     class_name = path.basename(class_dir)
@@ -146,8 +146,11 @@ def extract_noise_patterns(class_dir, is_test=False):
     # now calculate a mean across the image dimension
     ref_spn = np.mean(noise_patterns, axis=0)
 
-    noise_patterns_labels += [class_name] * len(noise_patterns)
-    
+    if not is_test:
+        noise_patterns_labels += [class_name] * len(noise_patterns)
+    else:
+        noise_patterns_labels = image_paths
+
     return [ref_spn, class_name, noise_patterns, noise_patterns_labels]
 
 
@@ -207,14 +210,17 @@ def the_algorithm(dataset_path=None, is_test=False):
         print('Starting class \"%s\" (%d of %d)' % (class_name, cidx + 1, len(classes_dir)))
         print('class_dir %s' % (class_dir))
 
-        ref_spn, _, noise_patterns, _ = extract_noise_patterns(class_dir, is_test)
+        ref_spn, _, noise_patterns, labels_or_paths = extract_noise_patterns(class_dir, is_test)
 
         # No need to save labels. I have them by the class_name variable
         np.save('../data/ref_spn_%s' % (class_name), ref_spn)
         np.save('../data/spn_%s' % (class_name), noise_patterns)
 
+        if is_test:
+            np.save('../data/filenames_%s' % (class_name), labels_or_paths)
+
     # Cleanup. Better safe than sorry
-    del ref_spn, noise_patterns
+    del ref_spn, noise_patterns, labels_or_paths
 
     # Let's concatenate all reference SPNs
     all_ref_spns = concatenate_ref_spns(classes_dir)
@@ -233,7 +239,10 @@ def the_algorithm(dataset_path=None, is_test=False):
         for image_spn in images_spn:
             all_corrs.append(get_correlations(all_ref_spns, image_spn))
         
-        labels += [class_name] * len(images_spn)
+        if not is_test:
+            labels += [class_name] * len(images_spn)
+        else:
+            labels = np.concatenate((labels, np.load('../data/filenames_%s.npy' % (class_name))))
 
         # At this point, all_corrs should be a (M, 40) array, where M
         # is the number of images, containing all correlations between
