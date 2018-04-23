@@ -222,27 +222,28 @@ def the_algorithm(dataset_path=None, is_test=False):
     # Each directory inside dataset/train/ is a class
     classes_dir = glob.glob(path.join(DATASET_DIR, '*'))
 
-    if False:
-        print('STAGE 1: SPN EXTRACTION (CLASS REFERENCE AND ALL IMAGES)')
+    print(classes_dir)
 
-        for cidx, class_dir in enumerate(classes_dir):
-            class_name = path.basename(class_dir)
+    print('STAGE 1: SPN EXTRACTION (CLASS REFERENCE AND ALL IMAGES)')
 
-            print('Starting class \"%s\" (%d of %d)' % (class_name, cidx + 1, len(classes_dir)))
-            print('class_dir %s' % (class_dir))
+    for cidx, class_dir in enumerate(classes_dir):
+        class_name = path.basename(class_dir)
 
-            features, labels_or_filenames = extract_features_from_class(class_dir, is_test)
+        print('Starting class \"%s\" (%d of %d)' % (class_name, cidx + 1, len(classes_dir)))
+        print('class_dir %s' % (class_dir))
 
-            # No need to save labels. I have them by the class_name variable
-            np.save('../data/lbpfeats_%s' % (class_name), features)
+        features, labels_or_filenames = extract_features_from_class(class_dir, is_test)
 
-            if is_test:
-                np.save('../data/lbpfeats_%s_filenames' % (class_name), labels_or_filenames)
+        # No need to save labels. I have them by the class_name variable
+        np.save('../data/lbpfeats_%s' % (class_name), features)
 
-        # Cleanup. Better safe than sorry
-        del features
+        if is_test:
+            np.save('../data/lbpfeats_%s_filenames' % (class_name), labels_or_filenames)
 
-        print('done extracting features')
+    # Cleanup. Better safe than sorry
+    del features
+
+    print('done extracting features')
 
     # Feature matrices were saved by class to save memory. We now
     # concatenate everything and prepare the label vector 
