@@ -200,9 +200,9 @@ def extract_features_from_class(class_dir, is_test=False):
     print('') # prints nothing but adds a \n to the end of the line
     
     if not is_test:
-        return feats
+        return feats, None
     else:
-        return [feats, image_paths]
+        return feats, image_paths
 
 
 def the_algorithm(dataset_path=None, is_test=False):
