@@ -1,0 +1,6 @@
+[submodule "lab5/external/yeephycho-detector"]
+	path = lab5/external/yeephycho-detector
+	url = https://github.com/yeephycho/tensorflow-face-detection.git
+[submodule "lab5/external/yeephycho-wider2tfrec"]
+	path = lab5/external/yeephycho-wider2tfrec
+	url = https://github.com/yeephycho/widerface-to-tfrecord.git
