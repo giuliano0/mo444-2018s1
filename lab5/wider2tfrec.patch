@@ -1,0 +1,210 @@
+diff --git a/WIDER b/WIDER
+index a2895df..0fa0be8 120000
+--- a/WIDER
++++ b/WIDER
+@@ -1 +1 @@
+-/home/yeephycho/Dataset/WIDER/
+\ No newline at end of file
++/home/giulianorp2010/datasets/wider_projected/
+\ No newline at end of file
+diff --git a/proto/face_label_map.pbtxt b/proto/face_label_map.pbtxt
+index b3f55c2..1a77ffc 100644
+--- a/proto/face_label_map.pbtxt
++++ b/proto/face_label_map.pbtxt
+@@ -1,9 +1,12 @@
+ item {
+   id: 0
+   name: 'background'
++  display_name: 'Background'
+ }
+ 
+ item {
+   id: 1
+   name: 'face'
++  display_name: 'Face'
+ }
++
+diff --git a/widerface_To_TFRecord.py b/widerface_To_TFRecord.py
+index 5251bfe..bd6285a 100644
+--- a/widerface_To_TFRecord.py
++++ b/widerface_To_TFRecord.py
+@@ -40,7 +40,7 @@ def parse_example(f):
+   print(filepath)
+   image_raw = cv2.imread(filepath)
+ 
+-  encoded_image_data = open(filepath).read()
++  encoded_image_data = open(filepath, 'rb').read()
+   key = hashlib.sha256(encoded_image_data).hexdigest()
+ 
+   height, width, channel = image_raw.shape
+@@ -63,17 +63,22 @@ def parse_example(f):
+             poses.append("front".encode('utf8'))
+             truncated.append(int(0))
+             print(xmins[-1], ymins[-1], xmaxs[-1], ymaxs[-1], classes_text[-1], classes[-1])
+-            valid_face_num += 1;
++            valid_face_num += 1
+ 
+   print("Face Number is %d" % face_num)
+   print("Valid face number is %d" % valid_face_num)
+ 
++  classes_text_bytes_compat = []
++
++  for ctxt in classes_text:
++    cbytes = tf.compat.as_bytes(ctxt)
++    classes_text_bytes_compat.append(cbytes)
+ 
+   tf_example = tf.train.Example(features=tf.train.Features(feature={
+     'image/height': dataset_util.int64_feature(int(height)),
+     'image/width': dataset_util.int64_feature(int(width)),
+-    'image/filename': dataset_util.bytes_feature(filename),
+-    'image/source_id': dataset_util.bytes_feature(filename),
++    'image/filename': dataset_util.bytes_feature(tf.compat.as_bytes(filename)),
++    'image/source_id': dataset_util.bytes_feature(tf.compat.as_bytes(filename)),
+     'image/key/sha256': dataset_util.bytes_feature(key.encode('utf8')),
+     'image/encoded': dataset_util.bytes_feature(encoded_image_data),
+     'image/format': dataset_util.bytes_feature('jpeg'.encode('utf8')),
+@@ -81,7 +86,7 @@ def parse_example(f):
+     'image/object/bbox/xmax': dataset_util.float_list_feature(xmaxs),
+     'image/object/bbox/ymin': dataset_util.float_list_feature(ymins),
+     'image/object/bbox/ymax': dataset_util.float_list_feature(ymaxs),
+-    'image/object/class/text': dataset_util.bytes_list_feature(classes_text),
++    'image/object/class/text': dataset_util.bytes_list_feature(classes_text_bytes_compat),
+     'image/object/class/label': dataset_util.int64_list_feature(classes),
+     'image/object/difficult': dataset_util.int64_list_feature(int(0)),
+     'image/object/truncated': dataset_util.int64_list_feature(truncated),
+diff --git a/widerproj2tfrec.py b/widerproj2tfrec.py
+new file mode 100644
+index 0000000..ba46cb4
+--- /dev/null
++++ b/widerproj2tfrec.py
+@@ -0,0 +1,130 @@
++from __future__ import absolute_import
++from __future__ import division
++from __future__ import print_function
++
++import tensorflow as tf
++import numpy as np
++import cv2
++import os
++import hashlib
++import pandas as pd
++from argparse import ArgumentParser
++
++from utils import dataset_util
++
++parser = ArgumentParser()
++args = None
++
++def parse_example(annot_record):
++    height = None
++    width = None
++    filename = None
++    encoded_image_data = None
++    image_format = b'png'
++
++    xmins = [] # List of normalized left x coordinates in bounding box (1 per box)
++    xmaxs = [] # List of normalized right x coordinates in bounding box (1 per box)
++
++    ymins = [] # List of normalized top y coordinates in bounding box (1 per box)
++    ymaxs = [] # List of normalized bottom y coordinates in bounding box (1 per box)
++
++    classes_text = [] # List of string class name of bounding box (1 per box)
++    classes = [] # List of integer class id of bounding box (1 per box)
++
++    poses = []
++    truncated = []
++    #difficult_obj = []
++
++    # load, fill, build, return
++    filename = annot_record['Filename']
++    print(filename)
++    #filepath = os.path.join("./WIDER/train_projected/f1_951/", filename)
++    filepath = os.path.join(args.train_dir, annot_record['Set'], filename)
++    print(filepath)
++    image_raw = cv2.imread(filepath)
++
++    encoded_image_data = open(filepath, 'rb').read()
++    key = hashlib.sha256(encoded_image_data).hexdigest()
++
++    height, width, channel = image_raw.shape
++    print("height is %d, width is %d, channel is %d" % (height, width, channel))
++
++    
++    # convert from that string to an array
++    # also, wider appears to have annotations exceeding image boundaries
++    # but I trust Rafael did his homework so I won't check
++    box = np.fromstring(annot_record['box'][1:-1], sep=',')
++
++    xmins.append(max(0.005, (box[0] / width)))
++    ymins.append(max(0.005, (box[1] / height)))
++
++    xmaxs.append(min(0.995, ((box[0] + box[2]) / width)))
++    ymaxs.append(min(0.995, ((box[1] + box[3]) / width)))
++
++    classes_text.append('face')
++    classes.append(1)
++
++    poses.append('front'.encode('utf8'))
++    truncated.append(int(0))
++
++    print(xmins[-1], ymins[-1], xmaxs[-1], ymaxs[-1], classes_text[-1], classes[-1])
++
++    # Fix because python 2 is dead, guys, leave it
++    classes_text_bytes_compat = []
++    
++    for ctxt in classes_text:
++        cbytes = tf.compat.as_bytes(ctxt)
++        classes_text_bytes_compat.append(cbytes)
++
++    tf_example = tf.train.Example(features=tf.train.Features(feature={
++        'image/height':     dataset_util.int64_feature(int(height)),
++        'image/width':      dataset_util.int64_feature(int(width)),
++        'image/filename':   dataset_util.bytes_feature(tf.compat.as_bytes(filename)),
++        'image/source_id':  dataset_util.bytes_feature(tf.compat.as_bytes(filename)),
++        'image/key/sha256': dataset_util.bytes_feature(key.encode('utf8')),
++        'image/encoded':    dataset_util.bytes_feature(encoded_image_data),
++        'image/format':     dataset_util.bytes_feature(image_format), #'png'.encode('utf8')
++        'image/object/bbox/xmin':   dataset_util.float_list_feature(xmins),
++        'image/object/bbox/xmax':   dataset_util.float_list_feature(xmaxs),
++        'image/object/bbox/ymin':   dataset_util.float_list_feature(ymins),
++        'image/object/bbox/ymax':   dataset_util.float_list_feature(ymaxs),
++        'image/object/class/text':  dataset_util.bytes_list_feature(classes_text_bytes_compat),
++        'image/object/class/label': dataset_util.int64_list_feature(classes),
++        'image/object/difficult':   dataset_util.int64_list_feature(int(0)),
++        'image/object/truncated':   dataset_util.int64_list_feature(truncated),
++        'image/object/view':        dataset_util.bytes_list_feature(poses),
++    }))
++
++    return tf_example
++
++
++def main(unused_argv):
++    # this dataset, unlike the original wider, has only one face per image
++    annot_df = pd.read_csv(os.path.join(args.train_dir, 'proj_annotations.csv'))
++    writer = tf.python_io.TFRecordWriter(FLAGS.output_path)
++
++    for idx, annot in annot_df.iterrows():
++        print('image idx is %d' % (idx))
++
++        tf_example = parse_example(annot)
++
++        writer.write(tf_example.SerializeToString())
++
++    writer.close()
++
++    print('done')
++
++if __name__ == '__main__':
++    parser.add_argument('train_dir', help='train dir, where category folders ' +
++        'and label csv are e.g. ./WIDER/train_projected/f1_951/')
++    parser.add_argument('output_path', help='output tfrecord file e.g. output/train.tfrecord')
++
++    args = parser.parse_args()
++
++    # hopefully works
++    flags = tf.app.flags
++    #flags.DEFINE_string('output_path', 'output/train.tfrecord', 'Path to output TFRecord')
++    flags.DEFINE_string('output_path', args.output_path, 'Path to output TFRecord')
++    FLAGS = flags.FLAGS
++
++    tf.app.run()
